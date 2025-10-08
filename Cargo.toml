@@ -1,0 +1,20 @@
+[package]
+name = "ignored_derive"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+proc-macro2 = "1.0"
+syn = "2.0"
+quote = "1.0"
+
+[features]
+default-features = ["PartialEq", "PartialOrd", "Ord", "Debug", "Hash"]
+PartialEq = []
+PartialOrd = []
+Ord = []
+Debug = []
+Hash = []
+
+[lib]
+proc-macro = true
