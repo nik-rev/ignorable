@@ -1,15 +1,128 @@
+//! [![crates.io](https://img.shields.io/crates/v/docstr?style=flat-square&logo=rust)](https://crates.io/crates/docstr)
+//! [![docs.rs](https://img.shields.io/badge/docs.rs-docstr-blue?style=flat-square&logo=docs.rs)](https://docs.rs/docstr)
+//! ![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue?style=flat-square)
+//! ![msrv](https://img.shields.io/badge/msrv-1.56-blue?style=flat-square&logo=rust)
+//! [![github](https://img.shields.io/github/stars/nik-rev/docstr)](https://github.com/nik-rev/docstr)
+//!
+//! This crate provides derive macros that supercede the standard library's derives, with
+//! the ability to ignore individual fields rather than needing to resort to a manual `impl`.
+//!
 //! ```toml
 //! [dependencies]
-//! ignored_derive = { version = "1.0", features = ["PartialEq", "PartialOrd", "Ord", "Debug", "Hash"] }
+//! ignorable = "0.1"
 //! ```
 //!
-//! This crate provides two derive macros, `PartialEq` and `Hash`, that are
-//! intended to be drop-in replacements for the standard library's derives.
+//! Once [RFC 3869](https://github.com/rust-lang/rfcs/pull/3869) gets implemented in the language,
+//! you'll be able to remove this crate from your dependencies!
 //!
-//! The key feature is the `#[eqgnore]` attribute. When placed on a field
-//! of a struct or enum variant, that field will be completely ignored during
-//! equality checks and hashing operations.
-
+//! # Usage
+//!
+//! This crate provides 5 derive macros:
+//!
+//! - `PartialEq`
+//! - `PartialOrd`
+//! - `Ord`
+//! - `Debug`
+//! - `Hash`
+//!
+//! The advantage of these derives over the standard library's is that they support
+//! the `#[ignored]` attribute to ignore individual fields when deriving the respective traits.
+//!
+//! ```rust
+//! use ignorable::{PartialEq, Hash};
+//!
+//! // `PartialEq` and `Hash` impls will only check
+//! // the `id` field of 2 `User`s
+//! #[derive(Clone, PartialEq, Eq, Hash)]
+//! struct User {
+//!     #[ignored(PartialEq, Hash)]
+//!     name: String,
+//!     #[ignored(PartialEq, Hash)]
+//!     age: u8,
+//!     id: u64
+//! }
+//! ```
+//!
+//! Advantages:
+//!
+//! - **Significantly** less boilerplate
+//! - Less maintenance overhead, it's not your responsibility to remember to update manual implementations of traits,
+//!   keep traits like `Hash` and `PartialEq` in sync. We've got that covered!
+//! - This might become a language feature in the future ([RFC 3869](https://github.com/rust-lang/rfcs/pull/3869)),
+//!   so you'll be able to transition away from this crate once that time comes!
+//!
+//! Remember that it is a [logic error](https://doc.rust-lang.org/stable/std/hash/trait.Hash.html#hash-and-eq)
+//! for the implementations of `Hash` and `PartialEq` to differ, and if you need to manually implement the traits
+//! to skip certain fields, **you** must remember to keep them in sync because you can't use the `derive` anymore.
+//!
+//! This crate will compile error if you derive both `PartialEq` and `Hash`
+//! but only `#[ignore(Hash)]` on a single field, forgetting to also `#[ignore(PartialEq)]`.
+//! We're here to save you!
+//!
+//! # With `ignorable`
+//!
+//! Uses derives provided by this crate.
+//!
+//! ```rust
+//! use ignorable::{Debug, PartialEq, Hash};
+//!
+//! #[derive(Clone, Debug, PartialEq, Hash)]
+//! pub struct Var<T> {
+//!     pub ns: Symbol,
+//!     pub sym: Symbol,
+//!     #[ignored(PartialEq, Hash)]
+//!     meta: RefCell<protocols::IPersistentMap>,
+//!     #[ignored(PartialEq, Hash)]
+//!     pub root: RefCell<Rc<Value>>,
+//!     #[ignored(PartialEq, Hash, Debug)]
+//!     _phantom: PhantomData<T>
+//! }
+//! ```
+//!
+//! # Without
+//!
+//! Uses the standard library derives.
+//!
+//! ```rust
+//! #[derive(Clone)]
+//! pub struct Var<T> {
+//!     pub ns: Symbol,
+//!     pub sym: Symbol,
+//!     meta: RefCell<protocols::IPersistentMap>,
+//!     pub root: RefCell<Rc<Value>>,
+//!     _phantom: PhantomData<T>
+//! }
+//!
+//! impl<T> fmt::Debug for Var<T> {
+//!     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//!         f.debug_struct("Var")
+//!             .field("ns", &self.ns)
+//!             .field("sym", &self.sym)
+//!             .field("meta", &self.meta)
+//!             .field("root", &self.root)
+//!             .finish()
+//!     }
+//! }
+//!
+//! impl PartialEq for Var {
+//!     fn eq(&self, other: &Self) -> bool {
+//!         self.ns == other.ns && self.sym == other.sym
+//!     }
+//! }
+//!
+//! impl Hash for Var {
+//!     fn hash<H: Hasher>(&self, state: &mut H) {
+//!         (&self.ns, &self.sym).hash(state);
+//!     }
+//! }
+//! ```
+//!
+//! Notes:
+//!
+//! - It is logically incorrect for `Hash` and `PartialEq` implementations
+//!   to differ, so you must remember to keep them in sync if `Var` changes
+//! - You must remember to update the string names of the `Debug` impl if you
+//!   ever rename the fields or `Var` itself
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, format_ident, quote};
 use std::cmp::Ordering;
@@ -19,9 +132,9 @@ use syn::{Index, Member, parse_quote};
 
 create_derive!(PartialEq);
 create_derive!(PartialOrd);
-create_derive!(Hash);
-create_derive!(Debug);
 create_derive!(Ord);
+create_derive!(Debug);
+create_derive!(Hash);
 
 fn generate(
     input: &mut syn::DeriveInput,
@@ -157,19 +270,14 @@ fn generate(
 #[derive(Copy, Clone)]
 enum Deriving {
     /// Deriving [`PartialEq`]
-    #[cfg(feature = "PartialEq")]
     PartialEq,
     /// Deriving [`PartialOrd`]
-    #[cfg(feature = "PartialOrd")]
     PartialOrd,
     /// Deriving [`Ord`]
-    #[cfg(feature = "Ord")]
     Ord,
     /// Deriving [`Debug`]
-    #[cfg(feature = "Debug")]
     Debug,
     /// Deriving [`Hash`]
-    #[cfg(feature = "Hash")]
     Hash,
 }
 
@@ -177,15 +285,10 @@ enum Deriving {
 impl ToTokens for Deriving {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let path = match self {
-            #[cfg(feature = "PartialEq")]
             Deriving::PartialEq => quote! { ::core::cmp::PartialEq },
-            #[cfg(feature = "PartialOrd")]
             Deriving::PartialOrd => quote! { ::core::cmp::PartialOrd },
-            #[cfg(feature = "Ord")]
             Deriving::Ord => quote! { ::core::cmp::Ord },
-            #[cfg(feature = "Debug")]
             Deriving::Debug => quote! { ::core::fmt::Debug },
-            #[cfg(feature = "Hash")]
             Deriving::Hash => quote! { ::core::hash::Hash },
         };
 
@@ -197,23 +300,18 @@ impl Deriving {
     /// Signature of the single function belonging to the trait we are deriving
     pub fn signature(self) -> TokenStream {
         match self {
-            #[cfg(feature = "PartialEq")]
             Deriving::PartialEq => quote! {
                 fn eq(&self, other: &Self) -> bool
             },
-            #[cfg(feature = "PartialOrd")]
             Deriving::PartialOrd => quote! {
                 fn partial_cmp(&self, other: &Self) -> ::core::option::Option<::core::cmp::Ordering>
             },
-            #[cfg(feature = "Ord")]
             Deriving::Ord => quote! {
                 fn cmp(&self, other: &Self) -> ::core::cmp::Ordering
             },
-            #[cfg(feature = "Debug")]
             Deriving::Debug => quote! {
                 fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result
             },
-            #[cfg(feature = "Hash")]
             Deriving::Hash => quote! {
                 fn hash<__H>(&self, state: &mut __H) where __H: ::core::hash::Hasher
             },
@@ -223,29 +321,24 @@ impl Deriving {
     /// Generate logic for a single field
     pub fn handle_struct_field(self, member: Member) -> proc_macro2::TokenStream {
         match self {
-            #[cfg(feature = "PartialEq")]
             Deriving::PartialEq => quote! {
                 if self.#member != other.#member {
                     return false;
                 }
             },
-            #[cfg(feature = "PartialOrd")]
             Deriving::PartialOrd => quote! {
                 match #self::partial_cmp(&self.#member, &other.#member) {
                     ::core::option::Option::Some(::core::cmp::Ordering::Equal) => {},
                     cmp => return cmp,
                 }
             },
-            #[cfg(feature = "Ord")]
             Deriving::Ord => quote! {
                 match #self::cmp(&self.#member, &other.#member) {
                     ::core::cmp::Ordering::Equal => {},
                     cmp => return cmp,
                 }
             },
-            #[cfg(feature = "Debug")]
             Deriving::Debug => todo!(),
-            #[cfg(feature = "Hash")]
             Deriving::Hash => todo!(),
         }
     }
@@ -281,12 +374,9 @@ impl Deriving {
                     }
                 }
             }
-            #[cfg(any(feature = "PartialOrd", feature = "Ord"))]
             Deriving::PartialOrd | Deriving::Ord => {
                 let some = match self {
-                    #[cfg(feature = "PartialOrd")]
                     Deriving::PartialOrd => Some(quote! { ::core::option::Option::Some }),
-                    #[cfg(feature = "Ord")]
                     Deriving::Ord => None,
                     _ => unreachable!(),
                 };
@@ -308,14 +398,6 @@ impl Deriving {
                         }
                     },
                 );
-
-                // panic!(
-                //     "{}",
-                //     arms_cmp_discriminants
-                //         .flatten()
-                //         .collect::<TokenStream>()
-                //         .to_string()
-                // );
 
                 quote! {
                     match (self, other) {
@@ -341,7 +423,6 @@ impl Deriving {
     ) -> (EnumPatternField, proc_macro2::TokenStream) {
         let member_str = member.to_token_stream().to_string();
         match self {
-            #[cfg(feature = "PartialEq")]
             Deriving::PartialEq => {
                 let left = format_ident!("__l_{}", member_str);
                 let right = format_ident!("__r_{}", member_str);
@@ -355,14 +436,11 @@ impl Deriving {
                     },
                 )
             }
-            #[cfg(any(feature = "PartialOrd", feature = "Ord"))]
             Deriving::PartialOrd | Deriving::Ord => {
                 let equal = match self {
-                    #[cfg(feature = "PartialOrd")]
                     Deriving::PartialOrd => {
                         quote! { ::core::option::Option::Some(::core::cmp::Ordering::Equal) }
                     }
-                    #[cfg(feature = "Ord")]
                     Deriving::Ord => quote! { ::core::cmp::Ordering::Equal },
                     _ => unreachable!(),
                 };
@@ -380,48 +458,36 @@ impl Deriving {
                     },
                 )
             }
-            #[cfg(feature = "Debug")]
             Deriving::Debug => todo!(),
-            #[cfg(feature = "Hash")]
             Deriving::Hash => todo!(),
         }
     }
 
     pub fn handle_struct(self, fields: impl Iterator<Item = TokenStream>) -> TokenStream {
         match self {
-            #[cfg(feature = "PartialEq")]
             Deriving::PartialEq => quote! {
                 #(#fields)*
                 true
             },
-            #[cfg(feature = "PartialOrd")]
             Deriving::PartialOrd => quote! {
                 #(#fields)*
                 ::core::option::Option::Some(::core::cmp::Ordering::Equal)
             },
-            #[cfg(feature = "Ord")]
             Deriving::Ord => quote! {
                 #(#fields)*
                 ::core::cmp::Ordering::Equal
             },
-            #[cfg(feature = "Debug")]
             Deriving::Debug => todo!(),
-            #[cfg(feature = "Hash")]
             Deriving::Hash => todo!(),
         }
     }
 
     /// If this derive ignores `field`
     pub fn is_ignored_in(self, field: &Field, errors: &mut Vec<Error>) -> bool {
-        #[cfg(feature = "PartialEq")]
         let mut partial_eq = false;
-        #[cfg(feature = "PartialOrd")]
         let mut partial_ord = false;
-        #[cfg(feature = "Ord")]
         let mut ord = false;
-        #[cfg(feature = "Debug")]
         let mut debug = false;
-        #[cfg(feature = "Hash")]
         let mut hash = false;
 
         for attr in &field.attrs {
@@ -430,29 +496,19 @@ impl Deriving {
                     let ident = meta.path.require_ident()?;
 
                     let value = match ident.to_string().as_str() {
-                        #[cfg(feature = "PartialEq")]
                         "PartialEq" => &mut partial_eq,
-                        #[cfg(feature = "PartialOrd")]
                         "PartialOrd" => &mut partial_ord,
-                        #[cfg(feature = "Ord")]
                         "Ord" => &mut ord,
-                        #[cfg(feature = "Debug")]
                         "Debug" => &mut debug,
-                        #[cfg(feature = "Hash")]
                         "Hash" => &mut hash,
                         // necessary due to the way our `cfg` works
                         #[allow(clippy::vec_init_then_push)]
                         _ => {
                             let mut expected = Vec::new();
-                            #[cfg(feature = "PartialEq")]
                             expected.push("`PartialEq`");
-                            #[cfg(feature = "PartialOrd")]
                             expected.push("`PartialOrd`");
-                            #[cfg(feature = "Ord")]
                             expected.push("`Ord`");
-                            #[cfg(feature = "Debug")]
                             expected.push("`Debug`");
-                            #[cfg(feature = "Hash")]
                             expected.push("`Hash`");
 
                             return Err(Error::new(
@@ -481,15 +537,10 @@ impl Deriving {
         }
 
         match self {
-            #[cfg(feature = "PartialEq")]
             Deriving::PartialEq => partial_eq,
-            #[cfg(feature = "PartialOrd")]
             Deriving::PartialOrd => partial_ord,
-            #[cfg(feature = "Ord")]
             Deriving::Ord => ord,
-            #[cfg(feature = "Debug")]
             Deriving::Debug => debug,
-            #[cfg(feature = "Hash")]
             Deriving::Hash => hash,
         }
     }
