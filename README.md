@@ -1,0 +1,128 @@
+# `ignorable`
+
+<!-- cargo-rdme start -->
+
+[![crates.io](https://img.shields.io/crates/v/ignorable?style=flat-square&logo=rust)](https://crates.io/crates/ignorable)
+[![docs.rs](https://img.shields.io/badge/docs.rs-ignorable-blue?style=flat-square&logo=docs.rs)](https://docs.rs/ignorable)
+![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue?style=flat-square)
+![msrv](https://img.shields.io/badge/msrv-1.56-blue?style=flat-square&logo=rust)
+[![github](https://img.shields.io/github/stars/nik-rev/ignorable)](https://github.com/nik-rev/ignorable)
+
+This crate provides 5 derives that are just like the standard library's, but they allow
+to ignore fields when deriving. Inspired by [RFC 3869](https://github.com/rust-lang/rfcs/pull/3869)
+
+```toml
+[dependencies]
+ignorable = "0.1"
+```
+
+# Usage
+
+This crate provides 5 derive macros:
+
+- `PartialEq`
+- `PartialOrd`
+- `Ord`
+- `Debug`
+- `Hash`
+
+The advantage of these derives over the standard library's is that they support
+the `#[ignored]` attribute to ignore individual fields when deriving the respective traits.
+
+```rust
+use ignorable::{PartialEq, Hash};
+
+// `PartialEq` and `Hash` impls will only check
+// the `id` field of 2 `User`s
+#[derive(Clone, PartialEq, Eq, Hash)]
+struct User {
+    #[ignored(PartialEq, Hash)]
+    name: String,
+    #[ignored(PartialEq, Hash)]
+    age: u8,
+    id: u64
+}
+```
+
+Advantages:
+
+- **Significantly** less boilerplate
+- Less maintenance overhead, it's not your responsibility to remember to update manual implementations of traits,
+  keep traits like `Hash` and `PartialEq` in sync. We've got that covered!
+- This might become a language feature in the future ([RFC 3869](https://github.com/rust-lang/rfcs/pull/3869)),
+  so you'll be able to transition away from this crate once that time comes!
+
+Remember that it is a [logic error](https://doc.rust-lang.org/stable/std/hash/trait.Hash.html#hash-and-eq)
+for the implementations of `Hash` and `PartialEq` to differ, and if you need to manually implement the traits
+to skip certain fields, **you** must remember to keep them in sync because you can't use the `derive` anymore.
+
+This crate will compile error if you derive both `PartialEq` and `Hash`
+but only `#[ignore(Hash)]` on a single field, forgetting to also `#[ignore(PartialEq)]`.
+We're here to save you!
+
+# With `ignorable`
+
+Uses derives provided by this crate.
+
+```rust
+use ignorable::{Debug, PartialEq, Hash};
+
+#[derive(Clone, Debug, PartialEq, Hash)]
+pub struct Var<T> {
+    pub ns: Symbol,
+    pub sym: Symbol,
+    #[ignored(PartialEq, Hash)]
+    meta: RefCell<protocols::IPersistentMap>,
+    #[ignored(PartialEq, Hash)]
+    pub root: RefCell<Rc<Value>>,
+    #[ignored(Debug)]
+    _phantom: PhantomData<T>
+}
+```
+
+# Without
+
+You must manually implement the traits.
+
+```rust
+#[derive(Clone)]
+pub struct Var<T> {
+    pub ns: Symbol,
+    pub sym: Symbol,
+    meta: RefCell<protocols::IPersistentMap>,
+    pub root: RefCell<Rc<Value>>,
+    _phantom: PhantomData<T>
+}
+
+impl<T> fmt::Debug for Var<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Var")
+            .field("ns", &self.ns)
+            .field("sym", &self.sym)
+            .field("meta", &self.meta)
+            .field("root", &self.root)
+            .finish()
+    }
+}
+
+impl PartialEq for Var {
+    fn eq(&self, other: &Self) -> bool {
+        self.ns == other.ns && self.sym == other.sym
+    }
+}
+
+impl Hash for Var {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (&self.ns, &self.sym).hash(state);
+    }
+}
+```
+
+Notes:
+
+- It is logically incorrect for `Hash` and `PartialEq` implementations
+  to differ, so you must remember to keep them in sync if `Var` changes
+- You must remember to update the string names of the `Debug` impl if you
+  ever rename the fields or `Var` itself
+
+<!-- cargo-rdme end -->

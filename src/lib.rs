@@ -52,10 +52,6 @@
 //! for the implementations of `Hash` and `PartialEq` to differ, and if you need to manually implement the traits
 //! to skip certain fields, **you** must remember to keep them in sync because you can't use the `derive` anymore.
 //!
-//! This crate will compile error if you derive both `PartialEq` and `Hash`
-//! but only `#[ignore(Hash)]` on a single field, forgetting to also `#[ignore(PartialEq)]`.
-//! We're here to save you!
-//!
 //! # With `ignorable`
 //!
 //! Uses derives provided by this crate.
