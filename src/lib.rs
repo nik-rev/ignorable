@@ -74,7 +74,7 @@
 //!
 //! # Without
 //!
-//! You must manually implement the traits.
+//! You must manually implement each trait.
 //!
 //! ```rust
 //! #[derive(Clone)]
@@ -117,11 +117,11 @@
 //! - You must remember to update the string names of the `Debug` impl if you
 //!   ever rename the fields or `Var` itself
 use proc_macro2::{Span, TokenStream};
-use quote::{ToTokens, format_ident, quote};
+use quote::{format_ident, quote, ToTokens};
 use std::cmp::Ordering;
-use syn::{DeriveInput, parse_macro_input};
-use syn::{Error, Field, Ident, Variant, punctuated::Punctuated, token::Comma};
-use syn::{Index, Member, parse_quote};
+use syn::{parse_macro_input, DeriveInput};
+use syn::{parse_quote, Index, Member};
+use syn::{punctuated::Punctuated, token::Comma, Error, Field, Ident, Variant};
 
 create_derive!(PartialEq);
 create_derive!(PartialOrd);
@@ -640,7 +640,7 @@ impl Deriving {
 fn map_enum_discriminant_permutations(
     variants: &Punctuated<Variant, Comma>,
     f: fn(usize, &Ident, usize, &Ident) -> TokenStream,
-) -> impl Iterator<Item = TokenStream> {
+) -> impl Iterator<Item = TokenStream> + '_ {
     variants
         .iter()
         .enumerate()

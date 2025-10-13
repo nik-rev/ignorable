@@ -1,6 +1,6 @@
 // tests/ui/03-struct-generics.rs
 
-use ignored_derive::{Debug, Hash, Ord, PartialEq, PartialOrd};
+use ignorable::{Debug, Hash, Ord, PartialEq, PartialOrd};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 struct GenericStruct<T, I> {

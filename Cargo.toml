@@ -1,7 +1,14 @@
 [package]
-name = "ignored_derive"
+name = "ignorable"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+description = "Standard library derives that can ignore individual fields"
+rust-version = "1.68"
+authors = ["Nik Revenco <pm@nikrev.com>"]
+repository = "https://github.com/nik-rev/ignorable"
+keywords = ["derive", "proc-macro", "utility", "macros", "no-std"]
+categories = ["no-std", "no-std::no-alloc", "development-tools", "development-tools::procedural-macro-helpers", "rust-patterns"]
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 proc-macro2 = "1.0"

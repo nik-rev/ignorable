@@ -1,4 +1,4 @@
-use ignored_derive::{Debug, Hash, Ord, PartialEq, PartialOrd};
+use ignorable::{Debug, Hash, Ord, PartialEq, PartialOrd};
 use std::cmp::Ordering;
 use std::hash::{DefaultHasher, Hash as StdHash, Hasher};
 
