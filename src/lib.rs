@@ -167,7 +167,11 @@ fn generate(
                     deriving.handle_struct_field(member)
                 });
 
-            deriving.handle_struct(handle_struct_fields)
+            deriving.handle_struct(
+                handle_struct_fields,
+                &input.ident,
+                matches!(data.fields, syn::Fields::Unnamed(_)),
+            )
         }
         syn::Data::Enum(data) => 'body: {
             if data.variants.is_empty() {
@@ -201,10 +205,10 @@ fn generate(
                     })
                     .unzip();
 
-                let handle_variant = deriving.handle_struct(handle_variant_fields.into_iter());
+                let handle_variant = deriving.handle_struct(handle_variant_fields.into_iter(), &variant.ident, matches!(variant.fields, syn::Fields::Unnamed(_)));
                 let variant_name = &variant.ident;
 
-                if matches!(fields_patterns.first(), Some(EnumPatternField::One(_))) {
+                if matches!(deriving, Deriving::Debug | Deriving::Hash) {
                     let patterns = fields_patterns.into_iter().map(|x| match x {
                         EnumPatternField::One(ident) => ident,
                         EnumPatternField::Two(..) => unreachable!(
@@ -252,7 +256,7 @@ fn generate(
     let signature = deriving.signature();
 
     quote! {
-        #[allow(non_snake_case)]
+        #[allow(non_snake_case, non_shorthand_field_patterns)]
         #[automatically_derived]
         impl #impl_generics #deriving for #name #ty_generics #where_clause {
             #signature {
@@ -338,8 +342,18 @@ impl Deriving {
                     cmp => return cmp,
                 }
             },
-            Deriving::Debug => todo!(),
-            Deriving::Hash => todo!(),
+            Deriving::Debug => match &member {
+                Member::Named(ident) => {
+                    let name = ident.to_string();
+                    quote! { .field(#name, &self.#member) }
+                }
+                Member::Unnamed(_) => {
+                    quote! { .field(&self.#member) }
+                }
+            },
+            Deriving::Hash => quote! {
+                #self::hash(&self.#member, state);
+            },
         }
     }
 
@@ -366,9 +380,10 @@ impl Deriving {
                 );
 
                 quote! {
-                    match (self, other) {
+                    let discriminant = match (self, other) {
                         #(#arms_eq_discriminants),*
-                    } && match (self, other) {
+                    };
+                    discriminant && match (self, other) {
                         #(#handle_variants),*
                         _ => true
                     }
@@ -411,8 +426,25 @@ impl Deriving {
                     }
                 }
             }
-            Deriving::Debug => todo!(),
-            Deriving::Hash => todo!(),
+            Deriving::Debug => quote! {
+                match &self {
+                    #(#handle_variants,)*
+                }
+            },
+            Deriving::Hash => {
+                let arms = variants.iter().enumerate().map(|(discriminant, variant)| {
+                    let ident = &variant.ident;
+                    quote! { Self::#ident { .. } => #self::hash(&#discriminant, state) }
+                });
+                quote! {
+                    match self {
+                        #(#arms,)*
+                    }
+                    match &self {
+                        #(#handle_variants)*
+                    }
+                }
+            }
         }
     }
 
@@ -437,11 +469,12 @@ impl Deriving {
                 )
             }
             Deriving::PartialOrd | Deriving::Ord => {
-                let equal = match self {
-                    Deriving::PartialOrd => {
-                        quote! { ::core::option::Option::Some(::core::cmp::Ordering::Equal) }
-                    }
-                    Deriving::Ord => quote! { ::core::cmp::Ordering::Equal },
+                let (method, equal) = match self {
+                    Deriving::PartialOrd => (
+                        quote! { partial_cmp },
+                        quote! { ::core::option::Option::Some(::core::cmp::Ordering::Equal) },
+                    ),
+                    Deriving::Ord => (quote! { cmp }, quote! { ::core::cmp::Ordering::Equal }),
                     _ => unreachable!(),
                 };
 
@@ -451,19 +484,47 @@ impl Deriving {
                 (
                     EnumPatternField::Two(left.clone(), right.clone()),
                     quote! {
-                        match #self::partial_cmp(&#left, &#right) {
+                        match #self::#method(&#left, &#right) {
                             #equal => {},
                             cmp => return cmp,
                         }
                     },
                 )
             }
-            Deriving::Debug => todo!(),
-            Deriving::Hash => todo!(),
+            Deriving::Debug => {
+                let ident = format_ident!("__{member_str}");
+                match &member {
+                    Member::Named(ident) => {
+                        let name = ident.to_string();
+                        (
+                            EnumPatternField::One(ident.clone()),
+                            quote! { .field(#name, #ident) },
+                        )
+                    }
+                    Member::Unnamed(_) => (
+                        EnumPatternField::One(ident.clone()),
+                        quote! { .field(#ident) },
+                    ),
+                }
+            }
+            Deriving::Hash => {
+                let ident = format_ident!("__{member_str}");
+                (
+                    EnumPatternField::One(ident.clone()),
+                    quote! {
+                        #self::hash(&#ident, state);
+                    },
+                )
+            }
         }
     }
 
-    pub fn handle_struct(self, fields: impl Iterator<Item = TokenStream>) -> TokenStream {
+    pub fn handle_struct(
+        self,
+        fields: impl Iterator<Item = TokenStream>,
+        name: &Ident,
+        is_tuple: bool,
+    ) -> TokenStream {
         match self {
             Deriving::PartialEq => quote! {
                 #(#fields)*
@@ -477,8 +538,24 @@ impl Deriving {
                 #(#fields)*
                 ::core::cmp::Ordering::Equal
             },
-            Deriving::Debug => todo!(),
-            Deriving::Hash => todo!(),
+            Deriving::Debug => {
+                let name = name.to_string();
+                match is_tuple {
+                    true => quote! {
+                        f.debug_tuple(#name)
+                            #(#fields)*
+                            .finish()
+                    },
+                    false => quote! {
+                        f.debug_struct(#name)
+                            #(#fields)*
+                            .finish()
+                    },
+                }
+            }
+            Deriving::Hash => quote! {
+                #(#fields)*
+            },
         }
     }
 
@@ -501,19 +578,13 @@ impl Deriving {
                         "Ord" => &mut ord,
                         "Debug" => &mut debug,
                         "Hash" => &mut hash,
-                        // necessary due to the way our `cfg` works
-                        #[allow(clippy::vec_init_then_push)]
                         _ => {
-                            let mut expected = Vec::new();
-                            expected.push("`PartialEq`");
-                            expected.push("`PartialOrd`");
-                            expected.push("`Ord`");
-                            expected.push("`Debug`");
-                            expected.push("`Hash`");
-
                             return Err(Error::new(
                                 ident.span(),
-                                format!("expected one of: {}", expected.join(", ")),
+                                concat!(
+                                    "expected one of: `PartialEq`, `PartialOrd`, ",
+                                    "`Ord`, `Debug`, `Hash`"
+                                ),
                             ));
                         }
                     };
@@ -610,6 +681,7 @@ fn map_enum_discriminant_permutations(
 
 /// We need to construct a pattern from a bunch of pieces, but this pattern
 /// can `match` either 1 enum or 2 enums.
+#[derive(std::fmt::Debug)]
 enum EnumPatternField {
     /// For implementation of [`Debug`] and [`Hash`]
     ///
