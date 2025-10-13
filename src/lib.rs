@@ -57,6 +57,19 @@
 //! Uses derives provided by this crate.
 //!
 //! ```rust
+//! # use std::marker::PhantomData;
+//! # use std::cell::RefCell;
+//! # use std::rc::Rc;
+//! #
+//! # #[derive(PartialEq, Debug, Hash, Clone)]
+//! # struct Symbol;
+//! # #[derive(PartialEq, Debug, Hash, Clone)]
+//! # struct Value;
+//! #
+//! # mod protocols {
+//! #     #[derive(PartialEq, Debug, Hash, Clone)]
+//! #     pub struct IPersistentMap;
+//! # };
 //! use ignorable::{Debug, PartialEq, Hash};
 //!
 //! #[derive(Clone, Debug, PartialEq, Hash)]
@@ -77,6 +90,21 @@
 //! You must manually implement each trait.
 //!
 //! ```rust
+//! # use std::marker::PhantomData;
+//! # use std::hash::{Hasher, Hash};
+//! # use std::fmt;
+//! # use std::cell::RefCell;
+//! # use std::rc::Rc;
+//! #
+//! # #[derive(PartialEq, Debug, Hash, Clone)]
+//! # struct Symbol;
+//! # #[derive(PartialEq, Debug, Hash, Clone)]
+//! # struct Value;
+//! #
+//! # mod protocols {
+//! #     #[derive(PartialEq, Debug, Hash, Clone)]
+//! #     pub struct IPersistentMap;
+//! # };
 //! #[derive(Clone)]
 //! pub struct Var<T> {
 //!     pub ns: Symbol,
@@ -97,13 +125,13 @@
 //!     }
 //! }
 //!
-//! impl PartialEq for Var {
+//! impl<T> PartialEq for Var<T> {
 //!     fn eq(&self, other: &Self) -> bool {
 //!         self.ns == other.ns && self.sym == other.sym
 //!     }
 //! }
 //!
-//! impl Hash for Var {
+//! impl<T> Hash for Var<T> {
 //!     fn hash<H: Hasher>(&self, state: &mut H) {
 //!         (&self.ns, &self.sym).hash(state);
 //!     }
