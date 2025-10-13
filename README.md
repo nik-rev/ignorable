@@ -10,7 +10,7 @@ edit `lib.rs` instead, then re-run `cargo rdme` to re-generate this file
 [![crates.io](https://img.shields.io/crates/v/ignorable?style=flat-square&logo=rust)](https://crates.io/crates/ignorable)
 [![docs.rs](https://img.shields.io/badge/docs.rs-ignorable-blue?style=flat-square&logo=docs.rs)](https://docs.rs/ignorable)
 ![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue?style=flat-square)
-![msrv](https://img.shields.io/badge/msrv-1.56-blue?style=flat-square&logo=rust)
+![msrv](https://img.shields.io/badge/msrv-1.68-blue?style=flat-square&logo=rust)
 [![github](https://img.shields.io/github/stars/nik-rev/ignorable)](https://github.com/nik-rev/ignorable)
 
 This crate provides 5 derives that are just like the standard library's, but they allow
@@ -106,13 +106,13 @@ impl<T> fmt::Debug for Var<T> {
     }
 }
 
-impl PartialEq for Var {
+impl<T> PartialEq for Var<T> {
     fn eq(&self, other: &Self) -> bool {
         self.ns == other.ns && self.sym == other.sym
     }
 }
 
-impl Hash for Var {
+impl<T> Hash for Var<T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (&self.ns, &self.sym).hash(state);
     }
