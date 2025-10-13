@@ -218,7 +218,7 @@ fn generate(
 
                     // match self {
                     quote! {
-                        Self::#variant_name { #(#members: #patterns,)* } => {
+                        Self::#variant_name { #(#members: #patterns,)* .. } => {
                             #handle_variant
                         }
                     }
@@ -234,8 +234,8 @@ fn generate(
                     // match (self, other) {
                     quote! {
                         (
-                            Self::#variant_name { #(#members: #lefts,)* },
-                            Self::#variant_name { #(#members: #rights,)* }
+                            Self::#variant_name { #(#members: #lefts,)* .. },
+                            Self::#variant_name { #(#members: #rights,)* .. }
                         ) => {
                             #handle_variant
                         }
