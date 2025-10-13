@@ -1,8 +1,8 @@
-//! [![crates.io](https://img.shields.io/crates/v/docstr?style=flat-square&logo=rust)](https://crates.io/crates/docstr)
-//! [![docs.rs](https://img.shields.io/badge/docs.rs-docstr-blue?style=flat-square&logo=docs.rs)](https://docs.rs/docstr)
+//! [![crates.io](https://img.shields.io/crates/v/ignorable?style=flat-square&logo=rust)](https://crates.io/crates/ignorable)
+//! [![docs.rs](https://img.shields.io/badge/docs.rs-ignorable-blue?style=flat-square&logo=docs.rs)](https://docs.rs/ignorable)
 //! ![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue?style=flat-square)
 //! ![msrv](https://img.shields.io/badge/msrv-1.56-blue?style=flat-square&logo=rust)
-//! [![github](https://img.shields.io/github/stars/nik-rev/docstr)](https://github.com/nik-rev/docstr)
+//! [![github](https://img.shields.io/github/stars/nik-rev/ignorable)](https://github.com/nik-rev/ignorable)
 //!
 //! This crate provides derive macros that supercede the standard library's derives, with
 //! the ability to ignore individual fields rather than needing to resort to a manual `impl`.
