@@ -141,8 +141,6 @@ fn generate(
     deriving: Deriving,
     errors: &mut Vec<Error>,
 ) -> TokenStream {
-    let where_clause = input.generics.make_where_clause();
-
     let body = match &input.data {
         syn::Data::Struct(data) => {
             let handle_struct_fields = data
@@ -157,12 +155,7 @@ fn generate(
                         .map(Member::Named)
                         .unwrap_or_else(|| Member::Unnamed(Index::from(i)));
 
-                    // All fields (that we actually care about) must implement the trait
-                    // that we are currently deriving
                     let field_ty = &field.ty;
-                    where_clause
-                        .predicates
-                        .push(parse_quote! { #field_ty: #deriving });
 
                     deriving.handle_struct_field(member)
                 });
@@ -194,12 +187,7 @@ fn generate(
                             .map(Member::Named)
                             .unwrap_or_else(|| Member::Unnamed(Index::from(i)));
 
-                        // All fields (that we actually care about) must implement the trait
-                        // that we are currently deriving
                         let field_ty = &field.ty;
-                        where_clause
-                            .predicates
-                            .push(parse_quote! { #field_ty: #deriving });
 
                         (member.clone(), deriving.handle_variant_field(member))
                     })
@@ -251,6 +239,9 @@ fn generate(
         }
     };
 
+    for type_param in input.generics.type_params_mut() {
+        type_param.bounds.push(parse_quote!( #deriving ));
+    }
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let name = &input.ident;
     let signature = deriving.signature();
