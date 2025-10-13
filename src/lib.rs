@@ -4,16 +4,13 @@
 //! ![msrv](https://img.shields.io/badge/msrv-1.56-blue?style=flat-square&logo=rust)
 //! [![github](https://img.shields.io/github/stars/nik-rev/ignorable)](https://github.com/nik-rev/ignorable)
 //!
-//! This crate provides derive macros that supercede the standard library's derives, with
-//! the ability to ignore individual fields rather than needing to resort to a manual `impl`.
+//! This crate provides 5 derives that are just like the standard library's, but they allow
+//! to ignore fields when deriving. Inspired by [RFC 3869](https://github.com/rust-lang/rfcs/pull/3869)
 //!
 //! ```toml
 //! [dependencies]
 //! ignorable = "0.1"
 //! ```
-//!
-//! Once [RFC 3869](https://github.com/rust-lang/rfcs/pull/3869) gets implemented in the language,
-//! you'll be able to remove this crate from your dependencies!
 //!
 //! # Usage
 //!
@@ -74,14 +71,14 @@
 //!     meta: RefCell<protocols::IPersistentMap>,
 //!     #[ignored(PartialEq, Hash)]
 //!     pub root: RefCell<Rc<Value>>,
-//!     #[ignored(PartialEq, Hash, Debug)]
+//!     #[ignored(Debug)]
 //!     _phantom: PhantomData<T>
 //! }
 //! ```
 //!
 //! # Without
 //!
-//! Uses the standard library derives.
+//! You must manually implement the traits.
 //!
 //! ```rust
 //! #[derive(Clone)]
@@ -155,8 +152,6 @@ fn generate(
                         .map(Member::Named)
                         .unwrap_or_else(|| Member::Unnamed(Index::from(i)));
 
-                    let field_ty = &field.ty;
-
                     deriving.handle_struct_field(member)
                 });
 
@@ -186,8 +181,6 @@ fn generate(
                             .clone()
                             .map(Member::Named)
                             .unwrap_or_else(|| Member::Unnamed(Index::from(i)));
-
-                        let field_ty = &field.ty;
 
                         (member.clone(), deriving.handle_variant_field(member))
                     })
