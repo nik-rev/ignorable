@@ -281,11 +281,11 @@ fn generate(
 /// the identifier of this trait, then the trait will skip this field.
 #[derive(Copy, Clone)]
 enum Deriving {
-    /// Deriving [`PartialEq`]
+    /// Deriving [`trait@PartialEq`]
     PartialEq,
-    /// Deriving [`PartialOrd`]
+    /// Deriving [`trait@PartialOrd`]
     PartialOrd,
-    /// Deriving [`Ord`]
+    /// Deriving [`trait@Ord`]
     Ord,
     /// Deriving [`Debug`]
     Debug,
@@ -702,7 +702,7 @@ enum EnumPatternField {
     ///
     /// `One` would hold `Ident(__0)`
     One(Ident),
-    /// For implementation of [`PartialOrd`], [`Ord`] and [`PartialEq`]
+    /// For implementation of [`trait@PartialOrd`], [`trait@Ord`] and [`trait@PartialEq`]
     ///
     /// ```ignore
     /// match (self, other) {
