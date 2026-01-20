@@ -16,7 +16,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v0.1.1] - 2025-10-13
 
 [v0.1.1]: https://github.com/nik-rev/ignorable/compare/v0.1.0...v0.1.1
-
-## [v0.1.0] - 2025-10-13
-
-[v0.1.0]: https://github.com/nik-rev/ignorable/releases/v0.1.0
