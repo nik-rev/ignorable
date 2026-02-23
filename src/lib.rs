@@ -1,16 +1,9 @@
-//! [![crates.io](https://img.shields.io/crates/v/ignorable?style=flat-square&logo=rust)](https://crates.io/crates/ignorable)
-//! [![docs.rs](https://img.shields.io/badge/docs.rs-ignorable-blue?style=flat-square&logo=docs.rs)](https://docs.rs/ignorable)
-//! ![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue?style=flat-square)
-//! ![msrv](https://img.shields.io/badge/msrv-1.68-blue?style=flat-square&logo=rust)
-//! [![github](https://img.shields.io/github/stars/nik-rev/ignorable)](https://github.com/nik-rev/ignorable)
+#![doc = nik_rev::badges!(repo = "ignorable")]
 //!
 //! This crate provides 5 derives that are just like the standard library's, but they allow
 //! to ignore fields when deriving. Inspired by [RFC 3869](https://github.com/rust-lang/rfcs/pull/3869)
 //!
-//! ```toml
-//! [dependencies]
-//! ignorable = "0.1"
-//! ```
+#![doc = nik_rev::add_dependency!()]
 //!
 //! # Usage
 //!

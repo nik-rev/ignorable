@@ -6,10 +6,17 @@ version = 3
 name = "ignorable"
 version = "0.1.2"
 dependencies = [
+ "nik-rev",
  "proc-macro2",
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "nik-rev"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0f0e0c6dcea7a075165f0a4b2696d10a6b9d1c3dfef1262f7b52b7a08df2ba9"
 
 [[package]]
 name = "proc-macro2"
