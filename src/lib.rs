@@ -1,9 +1,9 @@
-#![doc = nik_rev::badges!(repo = "ignorable")]
+#![doc = include_str!(concat!(env!("OUT_DIR"), "/GENERATED_BADGES"))]
 //!
 //! This crate provides 5 derives that are just like the standard library's, but they allow
 //! to ignore fields when deriving. Inspired by [RFC 3869](https://github.com/rust-lang/rfcs/pull/3869)
 //!
-#![doc = nik_rev::add_dependency!()]
+#![doc = include_str!(concat!(env!("OUT_DIR"), "/GENERATED_ADD_DEP"))]
 //!
 //! # Usage
 //!
