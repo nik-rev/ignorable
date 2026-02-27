@@ -28,7 +28,7 @@ to ignore fields when deriving. Inspired by [RFC 3869](https://github.com/rust-l
 ignorable = "0.1"
 ```
 
-# Usage
+## Usage
 
 This crate provides 5 derive macros:
 
@@ -68,7 +68,7 @@ Remember that it is a [logic error](https://doc.rust-lang.org/stable/std/hash/tr
 for the implementations of `Hash` and `PartialEq` to differ, and if you need to manually implement the traits
 to skip certain fields, **you** must remember to keep them in sync because you can’t use the `derive` anymore.
 
-# With `ignorable`
+## With `ignorable`
 
 Uses derives provided by this crate.
 
@@ -88,7 +88,7 @@ pub struct Var<T> {
 }
 ```
 
-# Without
+## Without
 
 You must manually implement each trait.
 
