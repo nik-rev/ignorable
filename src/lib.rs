@@ -143,12 +143,24 @@
 //!   to differ, so you must remember to keep them in sync if `Var` changes
 //! - You must remember to update the string names of the `Debug` impl if you
 //!   ever rename the fields or `Var` itself
-use proc_macro2::{Span, TokenStream};
-use quote::{format_ident, quote, ToTokens};
 use std::cmp::Ordering;
-use syn::{parse_macro_input, DeriveInput};
-use syn::{parse_quote, Index, Member};
-use syn::{punctuated::Punctuated, token::Comma, Error, Field, Ident, Variant};
+
+use proc_macro2::Span;
+use proc_macro2::TokenStream;
+use quote::format_ident;
+use quote::quote;
+use quote::ToTokens;
+use syn::parse_macro_input;
+use syn::parse_quote;
+use syn::punctuated::Punctuated;
+use syn::token::Comma;
+use syn::DeriveInput;
+use syn::Error;
+use syn::Field;
+use syn::Ident;
+use syn::Index;
+use syn::Member;
+use syn::Variant;
 
 create_derive!(PartialEq);
 create_derive!(PartialOrd);
@@ -311,56 +323,76 @@ impl Deriving {
     /// Signature of the single function belonging to the trait we are deriving
     pub fn signature(self) -> TokenStream {
         match self {
-            Deriving::PartialEq => quote! {
-                fn eq(&self, other: &Self) -> bool
-            },
-            Deriving::PartialOrd => quote! {
-                fn partial_cmp(&self, other: &Self) -> ::core::option::Option<::core::cmp::Ordering>
-            },
-            Deriving::Ord => quote! {
-                fn cmp(&self, other: &Self) -> ::core::cmp::Ordering
-            },
-            Deriving::Debug => quote! {
-                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result
-            },
-            Deriving::Hash => quote! {
-                fn hash<__H>(&self, state: &mut __H) where __H: ::core::hash::Hasher
-            },
+            Deriving::PartialEq => {
+                quote! {
+                    fn eq(&self, other: &Self) -> bool
+                }
+            }
+            Deriving::PartialOrd => {
+                quote! {
+                    fn partial_cmp(&self, other: &Self) -> ::core::option::Option<::core::cmp::Ordering>
+                }
+            }
+            Deriving::Ord => {
+                quote! {
+                    fn cmp(&self, other: &Self) -> ::core::cmp::Ordering
+                }
+            }
+            Deriving::Debug => {
+                quote! {
+                    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result
+                }
+            }
+            Deriving::Hash => {
+                quote! {
+                    fn hash<__H>(&self, state: &mut __H) where __H: ::core::hash::Hasher
+                }
+            }
         }
     }
 
     /// Generate logic for a single field
     pub fn handle_struct_field(self, member: Member) -> proc_macro2::TokenStream {
         match self {
-            Deriving::PartialEq => quote! {
-                if self.#member != other.#member {
-                    return false;
+            Deriving::PartialEq => {
+                quote! {
+                    if self.#member != other.#member {
+                        return false;
+                    }
                 }
-            },
-            Deriving::PartialOrd => quote! {
-                match #self::partial_cmp(&self.#member, &other.#member) {
-                    ::core::option::Option::Some(::core::cmp::Ordering::Equal) => {},
-                    cmp => return cmp,
+            }
+            Deriving::PartialOrd => {
+                quote! {
+                    match #self::partial_cmp(&self.#member, &other.#member) {
+                        ::core::option::Option::Some(::core::cmp::Ordering::Equal) => {},
+                        cmp => return cmp,
+                    }
                 }
-            },
-            Deriving::Ord => quote! {
-                match #self::cmp(&self.#member, &other.#member) {
-                    ::core::cmp::Ordering::Equal => {},
-                    cmp => return cmp,
+            }
+            Deriving::Ord => {
+                quote! {
+                    match #self::cmp(&self.#member, &other.#member) {
+                        ::core::cmp::Ordering::Equal => {},
+                        cmp => return cmp,
+                    }
                 }
-            },
-            Deriving::Debug => match &member {
-                Member::Named(ident) => {
-                    let name = ident.to_string();
-                    quote! { .field(#name, &self.#member) }
+            }
+            Deriving::Debug => {
+                match &member {
+                    Member::Named(ident) => {
+                        let name = ident.to_string();
+                        quote! { .field(#name, &self.#member) }
+                    }
+                    Member::Unnamed(_) => {
+                        quote! { .field(&self.#member) }
+                    }
                 }
-                Member::Unnamed(_) => {
-                    quote! { .field(&self.#member) }
+            }
+            Deriving::Hash => {
+                quote! {
+                    #self::hash(&self.#member, state);
                 }
-            },
-            Deriving::Hash => quote! {
-                #self::hash(&self.#member, state);
-            },
+            }
         }
     }
 
@@ -433,11 +465,13 @@ impl Deriving {
                     }
                 }
             }
-            Deriving::Debug => quote! {
-                match &self {
-                    #(#handle_variants,)*
+            Deriving::Debug => {
+                quote! {
+                    match &self {
+                        #(#handle_variants,)*
+                    }
                 }
-            },
+            }
             Deriving::Hash => {
                 let arms = variants.iter().enumerate().map(|(discriminant, variant)| {
                     let ident = &variant.ident;
@@ -466,21 +500,20 @@ impl Deriving {
                 let left = format_ident!("__l_{}", member_str);
                 let right = format_ident!("__r_{}", member_str);
 
-                (
-                    EnumPatternField::Two(left.clone(), right.clone()),
-                    quote! {
-                        if #left != #right {
-                            return false;
-                        }
-                    },
-                )
+                (EnumPatternField::Two(left.clone(), right.clone()), quote! {
+                    if #left != #right {
+                        return false;
+                    }
+                })
             }
             Deriving::PartialOrd | Deriving::Ord => {
                 let (method, equal) = match self {
-                    Deriving::PartialOrd => (
-                        quote! { partial_cmp },
-                        quote! { ::core::option::Option::Some(::core::cmp::Ordering::Equal) },
-                    ),
+                    Deriving::PartialOrd => {
+                        (
+                            quote! { partial_cmp },
+                            quote! { ::core::option::Option::Some(::core::cmp::Ordering::Equal) },
+                        )
+                    }
                     Deriving::Ord => (quote! { cmp }, quote! { ::core::cmp::Ordering::Equal }),
                     _ => unreachable!(),
                 };
@@ -488,15 +521,12 @@ impl Deriving {
                 let left = format_ident!("__l_{member_str}");
                 let right = format_ident!("__r_{member_str}");
 
-                (
-                    EnumPatternField::Two(left.clone(), right.clone()),
-                    quote! {
-                        match #self::#method(&#left, &#right) {
-                            #equal => {},
-                            cmp => return cmp,
-                        }
-                    },
-                )
+                (EnumPatternField::Two(left.clone(), right.clone()), quote! {
+                    match #self::#method(&#left, &#right) {
+                        #equal => {},
+                        cmp => return cmp,
+                    }
+                })
             }
             Deriving::Debug => {
                 let ident = format_ident!("__{member_str}");
@@ -508,20 +538,19 @@ impl Deriving {
                             quote! { .field(#name, #ident) },
                         )
                     }
-                    Member::Unnamed(_) => (
-                        EnumPatternField::One(ident.clone()),
-                        quote! { .field(#ident) },
-                    ),
+                    Member::Unnamed(_) => {
+                        (
+                            EnumPatternField::One(ident.clone()),
+                            quote! { .field(#ident) },
+                        )
+                    }
                 }
             }
             Deriving::Hash => {
                 let ident = format_ident!("__{member_str}");
-                (
-                    EnumPatternField::One(ident.clone()),
-                    quote! {
-                        #self::hash(&#ident, state);
-                    },
-                )
+                (EnumPatternField::One(ident.clone()), quote! {
+                    #self::hash(&#ident, state);
+                })
             }
         }
     }
@@ -533,36 +562,48 @@ impl Deriving {
         is_tuple: bool,
     ) -> TokenStream {
         match self {
-            Deriving::PartialEq => quote! {
-                #(#fields)*
-                true
-            },
-            Deriving::PartialOrd => quote! {
-                #(#fields)*
-                ::core::option::Option::Some(::core::cmp::Ordering::Equal)
-            },
-            Deriving::Ord => quote! {
-                #(#fields)*
-                ::core::cmp::Ordering::Equal
-            },
+            Deriving::PartialEq => {
+                quote! {
+                    #(#fields)*
+                    true
+                }
+            }
+            Deriving::PartialOrd => {
+                quote! {
+                    #(#fields)*
+                    ::core::option::Option::Some(::core::cmp::Ordering::Equal)
+                }
+            }
+            Deriving::Ord => {
+                quote! {
+                    #(#fields)*
+                    ::core::cmp::Ordering::Equal
+                }
+            }
             Deriving::Debug => {
                 let name = name.to_string();
                 match is_tuple {
-                    true => quote! {
-                        f.debug_tuple(#name)
-                            #(#fields)*
-                            .finish()
-                    },
-                    false => quote! {
-                        f.debug_struct(#name)
-                            #(#fields)*
-                            .finish()
-                    },
+                    true => {
+                        quote! {
+                            f.debug_tuple(#name)
+                                #(#fields)*
+                                .finish()
+                        }
+                    }
+                    false => {
+                        quote! {
+                            f.debug_struct(#name)
+                                #(#fields)*
+                                .finish()
+                        }
+                    }
                 }
             }
-            Deriving::Hash => quote! {
-                #(#fields)*
-            },
+            Deriving::Hash => {
+                quote! {
+                    #(#fields)*
+                }
+            }
         }
     }
 

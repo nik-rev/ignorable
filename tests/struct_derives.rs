@@ -1,6 +1,13 @@
-use ignorable::{Debug, Hash, Ord, PartialEq, PartialOrd};
 use std::cmp::Ordering;
-use std::hash::{DefaultHasher, Hash as StdHash, Hasher};
+use std::hash::DefaultHasher;
+use std::hash::Hash as StdHash;
+use std::hash::Hasher;
+
+use ignorable::Debug;
+use ignorable::Hash;
+use ignorable::Ord;
+use ignorable::PartialEq;
+use ignorable::PartialOrd;
 
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Debug, Hash)]
 struct NamedStruct {

@@ -1,4 +1,8 @@
-use ignorable::{Debug, Hash, Ord, PartialEq, PartialOrd};
+use ignorable::Debug;
+use ignorable::Hash;
+use ignorable::Ord;
+use ignorable::PartialEq;
+use ignorable::PartialOrd;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 struct GenericStruct<T, I> {
